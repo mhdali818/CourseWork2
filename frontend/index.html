@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>After Hour Adventures</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script> <!--To import Vue js-->
+    <script src="https://kit.fontawesome.com/38d064a076.js" crossorigin="anonymous"></script>
+    <!--Importing fonts from font awesome-->
+    <style>
+        /*CSS for the frontend*/
+        main {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+
+        .lesson-square {
+            width: 250px;
+            padding: 10px;
+            margin: 10px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+
+        .lesson-square img {
+            width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+
+        .checkout-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app"> <!--Vue.js application-->
+        <header>
+            <h1>{{ WebAppName }}</h1>
+            <button @click="toggleCheckout" :disabled="!cart.length" class="checkout-button">
+                <span class="fas fa-cart-plus"></span> Checkout ({{ cart.length }})
+            </button> <!--Checkout button on the top right-->
+            <div>
+                <label>Sort by:</label> <!--Radio buttons for sorting out the products-->
+                <input type="radio" v-model="sortAttribute" value="subject"> Subject
+                <input type="radio" v-model="sortAttribute" value="location"> Location
+                <input type="radio" v-model="sortAttribute" value="price"> Price
+                <input type="radio" v-model="sortAttribute" value="spaces"> Spaces
+                <br>
+                <label>Order:</label>
+                <input type="radio" v-model="sortOrder" value="asc"> Ascending
+                <input type="radio" v-model="sortOrder" value="desc"> Descending
+            </div>
+            <div>
+                <label>Search:</label>
+                <input v-model="searchQuery" @input="fetchLessons" placeholder="Search lessons..." />
+            </div>
+        </header>
+        <main>
+            <div v-if="showProduct"> <!--Displaying the products on the page-->
+                <div class="lesson-square" v-for="lesson in filteredLessons" :key="lesson._id">
+                    <img :src="`http://localhost:3000/${lesson.image}`" :alt="lesson.subject">
+                    <h2>{{ lesson.subject }}</h2>
+                    <p>Location: {{ lesson.location }}</p>
+                    <p>Price: {{ lesson.price }} AED</p>
+                    <p>Spaces: {{ lesson.spaces }}</p>
+                    <button @click="addToCart(lesson)" :disabled="lesson.spaces === 0">Add to cart</button>
+                </div>
+            </div>
+            <div v-else>
+                <h2>Shopping Cart</h2>
+                <div v-for="item in cart" :key="item.cartKey">
+                    <h3>{{ item.subject }}</h3>
+                    <p>Location: {{ item.location }}</p>
+                    <p>Price: {{ item.price }} AED</p>
+                    <button @click="removeFromCart(item)">Remove from Cart</button>
+                </div>
+                <div>
+                    <br> <!--User information-->
+                    <label>Name:</label>
+                    <input v-model="customerName" placeholder="Your Name">
+                    <span v-if="!nameValid" style="color: red;">Name must not contain numbers/special characters.</span>
+                    <label>Phone:</label>
+                    <input v-model="customerPhone" placeholder="Your Phone Number">
+                    <span v-if="!phoneValid" style="color: red;">Phone No. must be between 10 and 12 digits.</span>
+
+                </div>
+                <br><button @click="placeOrder" :disabled="cart.length === 0">Place Order</button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data: { //Initializing the data used in the Vue.js
+                WebAppName: 'After Hour Adventures',
+                showProduct: true,
+                sortAttribute: 'subject',
+                sortOrder: 'asc',
+                searchQuery: '',
+                lessons: [],
+                cart: [],
+                customerName: '',
+                customerPhone: '',
+                nameValid: true,
+                phoneValid: true
+            },
+            created() {
+                this.fetchLessons();
+            },
+            methods: { //Method for fetching the lessons from server 
+                fetchLessons() {
+                    fetch(`http://localhost:3000/lessons`)
+                        .then(response => response.json())
+                        .then(data => {
+                            this.lessons = data;
+                        })
+                        .catch(error => console.error('Error fetching lessons:', error));
+                },
+                addToCart(lesson) { //Method for adding lessons to the cart
+                    this.cart.push({ ...lesson, cartKey: Date.now() });
+                    lesson.spaces--;
+                },
+
+                removeFromCart(cartItem) { //Method for removing items from cart
+                    const index = this.cart.findIndex(item => item.cartKey === cartItem.cartKey);
+                    if (index > -1) {
+                        this.cart.splice(index, 1);
+                        const lesson = this.lessons.find(lesson => lesson._id === cartItem._id);
+                        if (lesson) lesson.spaces++;
+                    }
+                },
+                placeOrder() { //Method for placing an order
+                    this.nameValid = this.isNameValid;
+                    this.phoneValid = this.isPhoneValid;
+                    if (this.nameValid && this.phoneValid) {
+                        const groupedItems = this.cart.reduce((acc, item) => {
+                            if (!acc[item._id]) {
+                                acc[item._id] = { id: item._id, quantity: 0 };
+                            }
+                            acc[item._id].quantity++;
+                            return acc;
+                        }, {});
+
+                        const orderItems = Object.values(groupedItems);
+
+                        const orderData = {
+                            customerName: this.customerName,
+                            customerPhone: this.customerPhone,
+                            items: orderItems,
+                        };
+
+                        fetch('http://localhost:3000/order', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(orderData),
+                        })
+                            .then(response => response.json())
+                            .then(data => {
+                                console.log('Order placed:', data);
+                                alert('Order has been placed. Thank you.');
+                                this.cart = [];
+                                this.customerName = '';
+                                this.customerPhone = '';
+                                this.showProduct = true;
+                            })
+                            .catch(error => {
+                                console.error('Error placing order:', error);
+                                alert('Failed to place order.');
+                            });
+                    } else {
+                        alert('Please correct the errors before placing your order.');
+                    }
+                },
+                toggleCheckout() {
+                    this.showProduct = !this.showProduct;
+                },
+            },
+            computed: {
+
+                isNameValid() {
+                    // Name validation checker, must contain characters and length grater than 1
+                    return /^[A-Za-z\s]*$/.test(this.customerName) && this.customerName.length > 1;;
+                },
+                isPhoneValid() {
+                    // Phone Number validation, length must be between 10 and 12
+                    return /^\d{10,12}$/.test(this.customerPhone);
+                },
+                filteredLessons() {
+                    return this.lessons.filter(lesson => {
+                        const searchLower = this.searchQuery.toLowerCase();
+                        return lesson.subject.toLowerCase().includes(searchLower) ||
+                            lesson.location.toLowerCase().includes(searchLower) ||
+                            lesson.price.toString().includes(this.searchQuery) ||
+                            lesson.spaces.toString().includes(this.searchQuery);
+                    }).sort((a, b) => {
+                        let modifier = 1;
+                        if (this.sortOrder === 'desc') {
+                            modifier = -1;
+                        }
+                        return this.sortAttribute === 'price' || this.sortAttribute === 'spaces' ?
+                            (a[this.sortAttribute] - b[this.sortAttribute]) * modifier :
+                            a[this.sortAttribute].localeCompare(b[this.sortAttribute]) * modifier;
+                    });
+                },
+            },
+        });
+    </script>
+</body>
+
+</html>
