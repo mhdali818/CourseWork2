@@ -15,8 +15,12 @@ app.use((req, res, next) => {
   next();
 });
 
+const corsOptions = {
+  origin: 'https://mhdali818.github.io/CourseWork2/', // Replace with your GitHub Pages URL
+  optionsSuccessStatus: 200 //To make sure it runs on all devices including legacy ones
+};
 
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
 
 // Retrieve database connection string from environment variables
@@ -29,7 +33,7 @@ if (!dbConnectionString) {
 let db;
 
 // Connect to MongoDB
-MongoClient.connect(dbConnectionString, { useNewUrlParser: true, useUnifiedTopology: true })
+MongoClient.connect(dbConnectionString)
   .then(client => {
     console.log('Connected to Database');
     db = client.db('classlessons');

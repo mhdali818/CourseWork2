@@ -64,7 +64,7 @@
         <main>
             <div v-if="showProduct"> <!--Displaying the products on the page-->
                 <div class="lesson-square" v-for="lesson in filteredLessons" :key="lesson._id">
-                    <img :src="`http://localhost:3000/${lesson.image}`" :alt="lesson.subject">
+                    <img :src="`http://testingcw2-env.eba-2vyn9wny.eu-west-2.elasticbeanstalk.com/${lesson.image}`" :alt="lesson.subject">
                     <h2>{{ lesson.subject }}</h2>
                     <p>Location: {{ lesson.location }}</p>
                     <p>Price: {{ lesson.price }} AED</p>
@@ -116,7 +116,7 @@
             },
             methods: { //Method for fetching the lessons from server 
                 fetchLessons() {
-                    fetch(`http://localhost:3000/lessons`)
+                    fetch(`http://testingcw2-env.eba-2vyn9wny.eu-west-2.elasticbeanstalk.com/lessons`)
                         .then(response => response.json())
                         .then(data => {
                             this.lessons = data;
@@ -156,7 +156,7 @@
                             items: orderItems,
                         };
 
-                        fetch('http://localhost:3000/order', {
+                        fetch('http://testingcw2-env.eba-2vyn9wny.eu-west-2.elasticbeanstalk.com/order', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
