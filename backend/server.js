@@ -19,17 +19,25 @@ app.use((req, res, next) => {
 app.use(cors());
 app.use(bodyParser.json());
 
-//Database connection string
-const dbConnectionString = 'mongodb+srv://greensoul818:green123@cluster0.6ihyjvd.mongodb.net/';
+// Retrieve database connection string from environment variables
+const dbConnectionString = process.env.DB_CONNECTION;
+if (!dbConnectionString) {
+  console.error('Database connection string is not set');
+  process.exit(1); // Exit the app if database connection cant be established
+}
 
 let db;
 
-MongoClient.connect(dbConnectionString)
+// Connect to MongoDB
+MongoClient.connect(dbConnectionString, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(client => {
     console.log('Connected to Database');
-    db = client.db('classlessons'); //Name of the database
+    db = client.db('classlessons');
   })
-  .catch(error => console.error('Database connection error:', error));
+  .catch(error => {
+    console.error('Database connection error:', error);
+    process.exit(1); // Exit the app if database connection cant be established
+  });
 
 app.use('/images', express.static(path.join(__dirname, 'images'))); //To load files from the images directory
 
